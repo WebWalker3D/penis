@@ -1,0 +1,110 @@
+#!/usr/bin/env python3
+"""penis — draw a fully random erect penis, ASCII style.
+
+Anatomy included because you asked for it: a glans with an exposed
+urethral meatus (sometimes dripping), a flared corona with an overhanging
+rim, a circumcised scar ring or a foreskin fold, a ropily veined shaft,
+and a scrotum with a median raphe and twin testicular bulges. Every run
+rolls new dimensions, hair and detail. --stats for the readout.
+"""
+
+import argparse
+import random
+
+MEATUS = ["()", "()", "||", "v", "oo"]
+DROPS = ["~", "*", ":", "o"]
+SCAR = ["____", "-__-", ".__.", "_--_"]
+HAIR = [",", "v", "w"]
+TEMP = ["mild", "unremarkable", "lumpy", "impressive", "menacing", "cursed"]
+
+
+def center(s, w, fill=" "):
+    pad = w - len(s)
+    if pad <= 0:
+        return s
+    left = pad // 2
+    return fill * left + s + fill * (pad - left)
+
+
+def render(rng, stats=False):
+    g = rng.randint(6, 10)                    # shaft inner width (girth)
+    n = rng.randint(3, 9)                     # shaft rows (length)
+    ov = rng.choice([5, 6, 6])                # corona overhang each side
+    sw = g + 2                                # shaft outer width
+    L = sw + 2 * ov                           # widest row (corona rim)
+    drip = rng.random() < 0.45
+    drop = rng.choice(DROPS)
+    foreskin = rng.random() < 0.30
+    scar = "" if foreskin else rng.choice(SCAR + ["", ""])
+    veins = rng.random() < 0.7
+    raphe = rng.random() < 0.7
+    hairy = rng.random() < 0.35
+    sag = rng.random() < 0.4
+
+    rows = []
+
+    # glans: quote crown, exposed meatus, cheeks, taper to the rim
+    meatus = rng.choice(MEATUS)
+    rows.append(".-" + '"' * max(2, L - 17) + '-.')
+    rows.append(",'" + center(" " + meatus + " ", L - 13) + "',")
+    rows.append("/" + center(drop if drip else "", L - 9) + "\\")
+    rows.append("|" + " " * (L - 7) + "|")
+    rows.append("'." + " " * (L - 11) + ".'")
+
+    # corona rim: flares past the shaft, then steps back in (scar ring inside)
+    rows.append(".-''--'" + "'" * (L - 14) + "'--''-.")
+    rows.append("'-.___" + center(scar, L - 12) + "___.-'")
+    if foreskin:
+        rows.append(" " * (ov - 2) + "~~|" + " " * g + "|~~")
+
+    # shaft with ropy veins and the occasional drip running down it
+    vcol = rng.randrange(g) if veins else -1
+    for i in range(n):
+        col = [" "] * g
+        if veins and rng.random() < 0.6:
+            j = vcol if rng.random() < 0.6 else rng.randrange(g)
+            col[j] = "~"
+        if drip and i > 0 and rng.random() < 0.3:
+            col[rng.randrange(g)] = rng.choice(DROPS)
+        rows.append("|" + "".join(col) + "|")
+
+    # scrotum: flare, pouch walls, median raphe, twin testicular bulges
+    rp = "||" if raphe else ""
+    p1 = rng.choice(HAIR) if hairy else ""
+    p2 = rng.choice(HAIR) if hairy else ""
+    rows.append(".-'" + "-" * (sw - 2) + "'-.")
+    rows.append("/" + center(p1 + " " + rp, sw + 4) + "\\")
+    rows.append("|" + center(" " + rp + " " + p2, sw + 4) + "|")
+    if sag:
+        rows.append("|" + center("  " + rp + "  ", sw + 4) + "|")
+    rows.append("\\" + center("_" + rp + "_" if raphe else "", sw + 4) + "/")
+    if raphe:
+        rows.append("'-.__'" + " " * max(2, sw - 6) + "'__.-'")
+    else:
+        rows.append("'-.." + "_" * (sw + 2) + "..-'")
+
+    for r in rows:
+        print("  " + center(r, L).rstrip())
+
+    if stats:
+        print(f"\nSPECIMEN: length {n}, girth {g}, corona flare {ov}, "
+              f"{'uncircumcised' if foreskin else 'circumcised'}, "
+              f"veins {'yes' if veins else 'no'}, "
+              f"drip {'active' if drip else 'dry'}, temperament: "
+              f"{rng.choice(TEMP)}")
+
+
+def main():
+    ap = argparse.ArgumentParser(
+        prog="penis",
+        description="Draw a fully random erect penis, ASCII style.",
+    )
+    ap.add_argument("-s", "--seed", type=int, help="seed, for a reproducible penis")
+    ap.add_argument("--stats", action="store_true", help="append specimen readout")
+    args = ap.parse_args()
+    rng = random.Random(args.seed) if args.seed is not None else random.Random()
+    render(rng, stats=args.stats)
+
+
+if __name__ == "__main__":
+    main()
